@@ -109,7 +109,7 @@ for ii = 1:2
         h(1+(2-1)*iCT) = axes('Position',axpt(2,2,1,iCT,[],[0.2 0.2])); hold on;
         h(2+(2-1)*iCT) = axes('Position',axpt(2,2,2,iCT,[],[0.2 0.2])); hold on;
         for iClst = 1:4
-            for iVis = 1:nVis
+           for iVis = 1:nVis
                 if iClst==1
                     in = cellfun(@(x,y,z,w) isnan(x) & y(:,iCT) & strcmp(z,visList{iVis}) & w<0.01,...
                         cluster,ctype,area,pval_rf,'UniformOutput',false);
@@ -192,6 +192,7 @@ cd('D:\OneDrive - University of California, San Francisco\figures\allen\cluster_
 print(fHandle,'-dtiff','-r600','receptive_field.tif');
 
 %% sparsness
+clear h data fon
 stimList = {'drifting grating';'dot motion';'flash';'gabors'};
 binrange = 0:0.01:1;
 fHandle = figure('PaperUnits','Centimeters','PaperPosition',[2 2 15 6]);
@@ -201,7 +202,7 @@ for iCT = 1:2
    h(3+(2-1)*iCT) = axes('Position',axpt(4,2,3,iCT,[],[0.1 0.2])); hold on;
    h(4+(2-1)*iCT) = axes('Position',axpt(4,2,4,iCT,[],[0.1 0.2])); hold on;
    for iClst = 1:4
-       for iVis = 1:nVis
+       for iVis = 5
            if iClst==1
                in = cellfun(@(x,y,z) isnan(x) & y(:,iCT) & strcmp(z,visList{iVis}),...
                    cluster,ctype,area,'UniformOutput',false);
@@ -235,6 +236,7 @@ cd('D:\OneDrive - University of California, San Francisco\figures\allen\cluster_
 print(fHandle,'-dtiff','-r600','sparseness.tif');
 
 %% fano factor
+clear h data fon
 stimList = {'drifting grating';'dot motion';'flash';'gabors'};
 binrange = 0:0.5:30;
 fHandle = figure('PaperUnits','Centimeters','PaperPosition',[2 2 15 6]);
@@ -244,7 +246,7 @@ for iCT = 1:2
    h(3+(2-1)*iCT) = axes('Position',axpt(4,2,3,iCT,[],[0.1 0.2])); hold on;
    h(4+(2-1)*iCT) = axes('Position',axpt(4,2,4,iCT,[],[0.1 0.2])); hold on;
    for iClst = 1:4
-       for iVis = 1:nVis
+       for iVis = nVis
            if iClst==1
                in = cellfun(@(x,y,z) isnan(x) & y(:,iCT) & strcmp(z,visList{iVis}),...
                    cluster,ctype,area,'UniformOutput',false);
@@ -278,7 +280,7 @@ cd('D:\OneDrive - University of California, San Francisco\figures\allen\cluster_
 print(fHandle,'-dtiff','-r600','fano_factor.tif');
 
 %% other-drifting gratings
-
+clear h data fon
 binrange = {0:0.1:10;0:0.01:2;0:0.005:1};
 idxList = {'mod index';'f1/f0';'c50'};
 fHandle = figure('PaperUnits','Centimeters','PaperPosition',[2 2 11 6]);
@@ -287,7 +289,7 @@ for iCT = 1:2
    h(2+(2-1)*iCT) = axes('Position',axpt(3,2,2,iCT,[],[0.1 0.2])); hold on;
    h(3+(2-1)*iCT) = axes('Position',axpt(3,2,3,iCT,[],[0.1 0.2])); hold on;
    for iClst = 1:4
-       for iVis = 1:nVis
+       for iVis = 3
            if iClst==1
                in = cellfun(@(x,y,z) isnan(x) & y(:,iCT) & strcmp(z,visList{iVis}),...
                    cluster,ctype,area,'UniformOutput',false);
