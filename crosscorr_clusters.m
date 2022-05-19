@@ -20,7 +20,7 @@ sessionList = unique(session_id);
 nS = length(sessionList);
 
 pair = [];
-crosscorr = cell((nclst+1+2+1)*(nclst+1+2)/2 + nclst,3,3);
+crosscorr = cell((nclst+1+2+1)*(nclst+1+2)/2,3,3);
 for iS = 1:nS
     iS
     %% load data
@@ -32,10 +32,6 @@ for iS = 1:nS
     %% calculate index
     invis = ismember(T.unit_id,tag.info.unit_id(tag.area.vis));
     inthal = ismember(T.unit_id,tag.info.unit_id(ismember(tag.info.structure,{'LGd';'LGv';'LP'})));
-    indca1 = ismember(T.unit_id,tag.info.unit_id(strcmp(tag.info.structure,'CA1') &...
-        tag.info.ccf(:,3)<7800 & tag.celltype.rs));
-    inica1 = ismember(T.unit_id,tag.info.unit_id(strcmp(tag.info.structure,'CA1') &...
-        tag.info.ccf(:,3)>8800 & tag.celltype.rs));
     
     [in,idx] = ismember(T.unit_id,unitid);
     clstidx = NaN(length(T.unit_id),1);
@@ -62,75 +58,58 @@ for iS = 1:nS
     end
     
     %% average psth for each cluster
-    in = invis|inthal|indca1|inica1;
     spkhist = NaN(length(T.unit_id),nbin);
-    spkhist(in,:) =...
+    spkhist(invis|inthal,:) =...
         cell2mat(cellfun(@(x) histcounts(x,spontaneous_win(1)-2*win_corr:binsize:...
-        spontaneous_win(2)+2*win_corr)*(1/binsize),T.spike_time(in),...
+        spontaneous_win(2)+2*win_corr)*(1/binsize),T.spike_time(invis|inthal),...
         'UniformOutput',false));
     spkhistz = zscore(spkhist,[],2);
     
-    data = NaN(nclst*2+3+1,nbin);
-    datasub = NaN(nclst*2,2,nbin);
-    datact = NaN(nclst*2+3+1,1);
+    data = NaN(nclst*2+1+2+1,nbin);
+    datact = NaN(nclst*2+1+2+1,1);
     kClst = 1;
-    for iClst = 1:nclst+3
+    for iClst = 1:nclst+1
         for iCT = 1:2
-            if iClst>=nclst+1
-                switch iClst
-                    case nclst+1
-                        inclst = inthal;
-                    case nclst+2
-                        inclst = indca1;
-                    case nclst+3
-                        inclst = inica1;
-                end
-                
+            if iClst==1
+                inclst = inthal;
                 if iCT==2
                     continue;
                 end
             else
-                inclst = invis & celltype(:,iCT) & clstidx==iClst;
+                inclst = invis & celltype(:,iCT) & clstidx==iClst-1;
                 datact(kClst) = iCT;
             end
             data(kClst,:) = conv2(nanmean(spkhistz(inclst,:),1),...
                 fspecial('Gaussian',[1 5*resolution],resolution),'same');
-            if iClst<nclst+1
-                idxtemp = randsample(find(inclst),sum(inclst));
-                datasub(iCT+(iClst-1)*2,1,:) = conv(nanmean(spkhistz(idxtemp(1:round(length(idxtemp)/2)),:),1),...
-                    fspecial('Gaussian',[1 5*resolution],resolution),'same');
-                datasub(iCT+(iClst-1)*2,2,:) = conv(nanmean(spkhistz(idxtemp(round(length(idxtemp)/2)+1:end),:),1),...
-                    fspecial('Gaussian',[1 5*resolution],resolution),'same');
-            end
             kClst = kClst+1;
         end
     end
     
-%     %% lfp power
-%     for iRef = 1:2
-%         if iscell(filtered_lfp.time{iRef})
-%             temp_start = cellfun(@(x) find(x>spontaneous_win(1),1,'first'),...
-%                 filtered_lfp.time{iRef},'UniformOutput',false);
-%             temp_start = find(cellfun(@(x) ~isempty(x),temp_start),1,'first');
-%             temp_end = cellfun(@(x) find(x<spontaneous_win(end),1,'last'),...
-%                 filtered_lfp.time{iRef},'UniformOutput',false);
-%             temp_end = find(cellfun(@(x) ~isempty(x),temp_end),1,'last');
-%             lfptime = cell2mat(filtered_lfp.time{iRef}(temp_start:temp_end)')';
-%             flfp = nanmean(cell2mat(filtered_lfp.lfp{iRef}(temp_start:temp_end)),2);
-%         else
-%             lfptime = filtered_lfp.time{iRef};
-%             flfp = nanmean(filtered_lfp.lfp{iRef},2);
-%         end
-%         
-%         data(2*nclst+1+iRef,:) = conv2(interp1(lfptime,abs(flfp)',spktime),...
-%             fspecial('Gaussian',[1 5*resolution],resolution),'same');
-%     end
-%     
-    %% pupil
+    %% lfp power
+    for iRef = 1:2
+        if iscell(filtered_lfp.time{iRef})
+            temp_start = cellfun(@(x) find(x>spontaneous_win(1),1,'first'),...
+                filtered_lfp.time{iRef},'UniformOutput',false);
+            temp_start = find(cellfun(@(x) ~isempty(x),temp_start),1,'first');
+            temp_end = cellfun(@(x) find(x<spontaneous_win(end),1,'last'),...
+                filtered_lfp.time{iRef},'UniformOutput',false);
+            temp_end = find(cellfun(@(x) ~isempty(x),temp_end),1,'last');
+            lfptime = cell2mat(filtered_lfp.time{iRef}(temp_start:temp_end)')';
+            flfp = nanmean(cell2mat(filtered_lfp.lfp{iRef}(temp_start:temp_end)),2);
+        else
+            lfptime = filtered_lfp.time{iRef};
+            flfp = nanmean(filtered_lfp.lfp{iRef},2);
+        end
+        
+        data(2*nclst+1+iRef,:) = conv2(interp1(lfptime,abs(flfp)',spktime),...
+            fspecial('Gaussian',[1 5*resolution],resolution),'same');
+    end
+    
+    %% pupil 
     pupil_size = pupil_data.pupil_height/2.*pupil_data.pupil_width/2*pi;
     pupil_size = interp1(pupil_data.time,pupil_size,spktime);
     pupil_size_norm = pupil_size/nanmean(pupil_size(~inspont));
-    data(2*nclst+3+1,:) =...
+    data(2*nclst+1+2+1,:) =...
         conv(pupil_size_norm,fspecial('Gaussian',[1 5*resolution],resolution),'same');
     
     %% calculating correlation
@@ -143,44 +122,25 @@ for iS = 1:nS
         analwin = [find(diff([0;inanal])==1),find(diff([inanal;0])==-1)];
         analwin(diff(analwin,[],2)<3/binsize,:) = []; % use only window that is longer than 3s
         
-        for iPair = 1:3 % rs-rs, fs-fs, rs-fs
-            if iPair<3
-                [datasub1,datasub2] = deal(data(datact==iPair | isnan(datact),:));
-            else
-                datasub1 = data(datact==1 | isnan(datact),:);
-                datasub2 = data(datact==2 | isnan(datact),:);
-            end
+        for iPair = 1:2 % rs-rs, fs-fs
+            datasub = data(datact==iPair | isnan(datact),:);
             
             k = 1;
             for i = 1:nclst+1+2
-                for j = i:nclst+1+2+1
-                    if i==j & i>nclst
-                        continue;
+                for j = i+1:nclst+1+2+1
+                    corrtemp = NaN(size(analwin,1),2*win_corr/binsize+1);
+                    for iw = 1:size(analwin,1)
+                        datatemp = [datasub(i,analwin(iw,1):analwin(iw,2));...
+                            datasub(j,analwin(iw,1):analwin(iw,2))];
+                        idx = 1/binsize+1:size(datatemp,2)-1/binsize;                        
+                        corrtemp(iw,:) = cellfun(@(x) corr(datatemp(1,idx)',datatemp(2,idx+x)'),...
+                            num2cell(-win_corr/binsize:win_corr/binsize));
                     end
                     if iS==1
                         crosscorr{k,iState,iPair} = NaN(nS,2*win_corr/binsize+1);
                         if iState==1 & iPair==1
                             pair = [pair;i,j];
                         end
-                    end
-                    
-                    
-                    if iPair==3 & (i>nclst | j>nclst)
-                        k = k+1;
-                        continue;
-                    end
-                    corrtemp = NaN(size(analwin,1),2*win_corr/binsize+1);
-                    for iw = 1:size(analwin,1)
-                        if iPair<3 & (i==j)
-                            datatemp = squeeze([datasub(iPair+(i-1)*2,1,analwin(iw,1):analwin(iw,2));...
-                                datasub(iPair+(j-1)*2,2,analwin(iw,1):analwin(iw,2))]);
-                        else
-                            datatemp = [datasub1(i,analwin(iw,1):analwin(iw,2));...
-                                datasub2(j,analwin(iw,1):analwin(iw,2))];
-                        end
-                        idx = 1/binsize+1:size(datatemp,2)-1/binsize;
-                        corrtemp(iw,:) = cellfun(@(x) corr(datatemp(1,idx)',datatemp(2,idx+x)'),...
-                            num2cell(-win_corr/binsize:win_corr/binsize));
                     end
                     crosscorr{k,iState,iPair}(iS,:) = nanmean(corrtemp);
                     k = k+1;
@@ -189,72 +149,71 @@ for iS = 1:nS
         end
     end
     
-end
-
-figname = {'rsrs';'fsfs';'rsfs'};
-ct = {[0.8 0.8 0.8],[0 0 0];[1 0.8 0.8],[1 0 0];[0.8 0.8 1],[0 0 1]};
-dataList = {'Iact';'Dact';'Inh';'Thal';'dCA1';'iCA1';'Pupil'};
-for iCT = 1:3
-    data = squeeze(crosscorr(:,:,iCT));
-    fHandle = figure('PaperUnits','Centimeters','PaperPosition',[2 2 10 10]);
-    for iP = 1:size(pair,1)
-        if isempty(data{iP,iState})
-            continue;
-        end
-        axes('Position',axpt(nclst+2+2,nclst+2+2,pair(iP,1),pair(iP,2)));
-        hold on;
-        for iState = 1:3
-            m = nanmean(data{iP,iState});
-            s = nanstd(data{iP,iState})/sqrt(nS);
-            fill([-win_corr:binsize:win_corr,flip(-win_corr:binsize:win_corr)],...
-                [m+s flip(m-s)],ct{iState,2},'EdgeColor','none');
-            plot(-win_corr:binsize:win_corr,m,'Color',ct{iState,2});
-        end
-        plot([0 0],[-0.8 0.8],'k:');
-        ylim([-0.3 0.7])
-        if pair(iP,1)==1
-            ylabel({['Y: ',dataList{pair(iP,2)}];'corr (X->Y)'});
+    
+     %% calculating correlation
+    for iState = 1:3 %immobile w/o ripple, immobile w/ dorsal ripple, w/ intermediate ripple
+        if iState==1
+            inanal = inspont & sum(inripple,2)==0;
         else
-            set(gca,'YTick',[]);
+            inanal = inspont & inripple(:,iState-1);
         end
-        if pair(iP,2)==nclst+1+2+1
-            xlabel(['X: ',dataList{pair(iP,1)}]);
-        else
-            set(gca,'XTick',[]);
+        analwin = [find(diff([0;inanal])==1),find(diff([inanal;0])==-1)];
+        analwin(diff(analwin,[],2)<3/binsize,:) = []; % use only window that is longer than 3s
+        
+        for iPair = 1:2 % rs-rs, fs-fs
+            datasub = data(datact==iPair | isnan(datact),:);
+            
+            k = 1;
+            for i = 1:nclst+1+2
+                for j = i+1:nclst+1+2+1
+                    corrtemp = NaN(size(analwin,1),2*win_corr/binsize+1);
+                    for iw = 1:size(analwin,1)
+                        datatemp = [datasub(i,analwin(iw,1):analwin(iw,2));...
+                            datasub(j,analwin(iw,1):analwin(iw,2))];
+                        idx = 1/binsize+1:size(datatemp,2)-1/binsize;                        
+                        corrtemp(iw,:) = cellfun(@(x) corr(datatemp(1,idx)',datatemp(2,idx+x)'),...
+                            num2cell(-win_corr/binsize:win_corr/binsize));
+                    end
+                    if iS==1
+                        crosscorr{k,iState,iPair} = NaN(nS,2*win_corr/binsize+1);
+                        if iState==1 & iPair==1
+                            pair = [pair;i,j];
+                        end
+                    end
+                    crosscorr{k,iState,iPair}(iS,:) = nanmean(corrtemp);
+                    k = k+1;
+                end
+            end
         end
-        set(gca,'Box','off','TickDir','out','FontSize',5,'LineWidth',0.35);
-        alpha(0.2);
     end
     
-    cd('D:\OneDrive - University of California, San Francisco\figures\allen\correlation');
-    print(fHandle,'-dtiff','-r600',['cross_corr_around_ripple_',figname{iCT},'.tif']);
+    
 end
 
 
-iCT = 1;
-iState = 1;
-data = squeeze(crosscorr(:,:,iCT));
-fHandle = figure('PaperUnits','Centimeters','PaperPosition',[2 2 6 5]);
+
+ct = {[0.8 0.8 0.8],[0 0 0];[1 0.8 0.8],[1 0 0];[0.8 0.8 1],[0 0 1]};
+dataList = {'Thal';'Iact';'Dact';'Inh';'D Rp power';'I Rp power';'Pupil'};
+fHandle = figure('PaperUnits','Centimeters','PaperPosition',[2 2 10 10]);
 for iP = 1:size(pair,1)
-    if isempty(data{iP,iState}) | sum(pair(iP,:)>3)>0
-        continue;
-    end
-    axes('Position',axpt(nclst,nclst,pair(iP,1),pair(iP,2),axpt(10,1,2:10,1)));
+    axes('Position',axpt(nclst+1+2,nclst+1+2,pair(iP,1),pair(iP,2)-1));
     hold on;
-    m = nanmean(data{iP,iState});
-    s = nanstd(data{iP,iState})/sqrt(nS);
-    plot(-win_corr:binsize:win_corr,data{iP,iState},'Color',ct{iState,1},'LineWidth',0.35);
-%     fill([-win_corr:binsize:win_corr,flip(-win_corr:binsize:win_corr)],...
-%         [m+s flip(m-s)],ct{iState,2},'EdgeColor','none');
-    plot(-win_corr:binsize:win_corr,m,'Color',ct{iState,2});
+    
+    for iState = 1:3
+        m = nanmean(crosscorr{iP,iState});
+        s = nanstd(crosscorr{iP,iState})/sqrt(nS);
+        fill([-win_corr:binsize:win_corr,flip(-win_corr:binsize:win_corr)],...
+            [m+s flip(m-s)],ct{iState,2},'EdgeColor','none');
+        plot(-win_corr:binsize:win_corr,m,'Color',ct{iState,2});
+    end
     plot([0 0],[-0.8 0.8],'k:');
-    ylim([-0.4 0.7])
+    ylim([-0.3 0.7])
     if pair(iP,1)==1
         ylabel({['Y: ',dataList{pair(iP,2)}];'corr (X->Y)'});
     else
         set(gca,'YTick',[]);
     end
-    if pair(iP,2)==3
+    if pair(iP,2)==nclst+1+2+1
         xlabel(['X: ',dataList{pair(iP,1)}]);
     else
         set(gca,'XTick',[]);
@@ -264,44 +223,7 @@ for iP = 1:size(pair,1)
 end
 
 cd('D:\OneDrive - University of California, San Francisco\figures\allen\correlation');
-print(fHandle,'-dtiff','-r600','cross_corr_rsrs_woripple.tif');
-
-
-iCT = 1;
-iState = 1;
-data = squeeze(crosscorr(:,:,iCT));
-ii = [1,2,3];
-jj = [4,5,6];
-fHandle = figure('PaperUnits','Centimeters','PaperPosition',[2 2 6 5]);
-for i = 1:3
-    for j = 1:3
-    axes('Position',axpt(3,3,i,j,axpt(10,1,2:10,1)));
-    hold on;
-    inpair = pair(:,1)==ii(i) & pair(:,2)==jj(j);
-    m = nanmean(data{inpair,iState});
-    s = nanstd(data{inpair,iState})/sqrt(nS);
-    plot(-win_corr:binsize:win_corr,data{inpair,iState},'Color',ct{iState,1},'LineWidth',0.35);
-%     fill([-win_corr:binsize:win_corr,flip(-win_corr:binsize:win_corr)],...
-%         [m+s flip(m-s)],ct{iState,2},'EdgeColor','none');
-    plot(-win_corr:binsize:win_corr,m,'Color',ct{iState,2});
-    plot([0 0],[-0.8 0.8],'k:');
-    ylim([-0.4 0.7])
-    if i==1
-        ylabel({['Y: ',dataList{jj(j)}];'corr (X->Y)'});
-    else
-        set(gca,'YTick',[]);
-    end
-    if j==3
-        xlabel(['X: ',dataList{ii(i)}]);
-    else
-        set(gca,'XTick',[]);
-    end
-    set(gca,'Box','off','TickDir','out','FontSize',5,'LineWidth',0.35);
-    end
-end
-
-cd('D:\OneDrive - University of California, San Francisco\figures\allen\correlation');
-print(fHandle,'-dtiff','-r600','cross_corr_rs_other_woripple.tif');
+print(fHandle,'-dtiff','-r600','cross_corr_around_ripple_rsrs.tif');
 
 function [time,behavior] = alignbeh2event(timeline,behdata,eventtime,win)
 [~,minidx] = cellfun(@(x) min(abs(timeline-x)),num2cell(eventtime));
