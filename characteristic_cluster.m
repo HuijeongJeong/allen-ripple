@@ -76,11 +76,15 @@ for iS = 1:nS
     area_rf{iS} = T.area_rf(in);
     pval_rf{iS} = T.p_value_rf(in);
     
-    behavior_corr{iS} = [fr_behavior.run.corr.r(in), fr_behavior.pupil.corr.r(in)];
-    behavior_corrp{iS} = [fr_behavior.run.corr.pval(in), fr_behavior.pupil.corr.pval(in)];
+    behavior_corr{iS} = [fr_behavior.run.corr.r(in), fr_behavior.pupil.corr.r(in),...
+        fr_behavior.pupil_norun.corr.r(in)];
+    behavior_corrp{iS} = [fr_behavior.run.corr.pval(in), fr_behavior.pupil.corr.pval(in),...
+        fr_behavior.pupil_norun.corr.pval(in)];
     
-    behavior_selec{iS} = [fr_behavior.run.selec.idx(in), fr_behavior.pupil.selec.idx(in)];
-    behavior_selecp{iS} = [fr_behavior.run.selec.pval(in), fr_behavior.pupil.selec.pval(in)];
+    behavior_selec{iS} = [fr_behavior.run.selec.idx(in), fr_behavior.pupil.selec.idx(in),...
+        fr_behavior.pupil_norun.selec.idx(in)];
+    behavior_selecp{iS} = [fr_behavior.run.selec.pval(in), fr_behavior.pupil.selec.pval(in),...
+        fr_behavior.pupil_norun.selec.pval(in)];
 end
 
 ct = [0.8 0.8 0.8; cbrewer('qual','Pastel2',3); 0,0,0; cbrewer('qual','Dark2',3)];
@@ -89,7 +93,7 @@ celltype = {'RS';'FS'};
 nVis = length(visList);
 
 %% behavior plot
-behList = {'running';'pupil'};
+behList = {'running';'pupil';'pupil-no running'};
 
 for ii = 1:2
     if ii==1
@@ -104,10 +108,11 @@ for ii = 1:2
         binrange = -1.5:0.05:1.5;
     end
     
-    fHandle = figure('PaperUnits','Centimeters','PaperPosition',[2 2 8 6]);
+    fHandle = figure('PaperUnits','Centimeters','PaperPosition',[2 2 11 6]);
     for iCT = 1:2
-        h(1+(2-1)*iCT) = axes('Position',axpt(2,2,1,iCT,[],[0.2 0.2])); hold on;
-        h(2+(2-1)*iCT) = axes('Position',axpt(2,2,2,iCT,[],[0.2 0.2])); hold on;
+        h(1+3*(iCT-1)) = axes('Position',axpt(3,2,1,iCT,[],[0.1 0.2])); hold on;
+        h(2+3*(iCT-1)) = axes('Position',axpt(3,2,2,iCT,[],[0.1 0.2])); hold on;
+        h(3+3*(iCT-1)) = axes('Position',axpt(3,2,3,iCT,[],[0.1 0.2])); hold on;
         for iClst = 1:4
            for iVis = 1:nVis
                 if iClst==1
@@ -121,27 +126,31 @@ for ii = 1:2
                 data_p = cell2mat(cellfun(@(x,y) x(y,:),p,in,'UniformOutput',false));
                 data_r = cell2mat(cellfun(@(x,y) x(y,:),idx,in,'UniformOutput',false));
                 
-                for ibeh = 1:2
+                for ibeh = 1:3
                     bincount = histc(data_r(:,ibeh),binrange);
                     data{ibeh,iVis,iClst} = cumsum(bincount)/sum(bincount);
-                    plot(binrange,data{ibeh,iVis,iClst},'Color',ct(iClst,:),'Parent',h(ibeh+(2-1)*iCT));
+                    plot(binrange,data{ibeh,iVis,iClst},'Color',ct(iClst,:),'Parent',h(ibeh+3*(iCT-1)));
                     fon(iVis,ibeh,iClst) = nanmean(data_p(:,ibeh)<0.05);
                 end
             end
         end
         
         for iClst = 1:4
-            for ibeh = 1:2
-                plot(binrange,nanmean(cell2mat(data(ibeh,:,iClst)),2),'Color',ct(iClst+4,:),'Parent',h(ibeh+(2-1)*iCT));
+            for ibeh = 1:3
+                plot(binrange,nanmean(cell2mat(data(ibeh,:,iClst)),2),'Color',ct(iClst+4,:),'Parent',h(ibeh+3*(iCT-1)));
                 text((binrange(end)-binrange(1))*0.1+binrange(1),...
                     0.95-(iClst-1)*0.07,[num2str(round(nanmean(fon(:,ibeh,iClst))*1000)/10),'%'],...
-                    'Color',ct(iClst+4,:),'Parent',h(ibeh+(2-1)*iCT),'FontSize',5);
+                    'Color',ct(iClst+4,:),'Parent',h(ibeh+3*(iCT-1)),'FontSize',5);
                 if iClst==4
-                    plot([0 0],[0 1],'k:','Parent',h(ibeh+(2-1)*iCT));
-                    title(h(ibeh+(2-1)*iCT),[celltype{iCT},'-',behList{ibeh}]);
-                    xlabel(h(ibeh+(2-1)*iCT),'r','FontSize',5);
-                    ylabel(h(ibeh+(2-1)*iCT),'cumulative fraction','FontSize',5);
-                    set(h(ibeh+(2-1)*iCT),'Box','off','TickDir','out',...
+                    plot([0 0],[0 1],'k:','Parent',h(ibeh+3*(iCT-1)));
+                    title(h(ibeh+3*(iCT-1)),[celltype{iCT},'-',behList{ibeh}]);
+                    if datatype==1
+                    xlabel(h(ibeh+3*(iCT-1)),'r','FontSize',5);
+                    else
+                    xlabel(h(ibeh+3*(iCT-1)),'selectivity index','FontSize',5);
+                    end
+                    ylabel(h(ibeh+3*(iCT-1)),'cumulative fraction','FontSize',5);
+                    set(h(ibeh+3*(iCT-1)),'Box','off','TickDir','out',...
                         'FontSize',5,'XLim',[binrange(1) binrange(end)]);
                 end
             end
