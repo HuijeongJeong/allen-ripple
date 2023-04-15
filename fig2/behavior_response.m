@@ -1,20 +1,22 @@
 clc; close all; clearvars;
-load('D:\OneDrive\1.allen-andermann\Totalinfo.mat','session_metric');
-load('D:\OneDrive\1.allen-andermann\tag.mat');
+load('D:\heejeong\OneDrive\1.allen-andermann\Totalinfo.mat','session_metric');
+load('D:\heejeong\OneDrive\1.allen-andermann\tag.mat');
 
 sessionList = session_metric.session_id(session_metric.immobile_period>100 &...
     session_metric.global_ripple_number>0);
 nS = length(sessionList);
-for iS = 1:nS
+for iS = 12:nS
     iS
-    load([sdir(sessionList(iS)),'_stimulus_evoked.mat'],'fr_behavior');
-%     if exist('fr_behavior','var')
-%         clear fr_behavior
-%         continue;
-%     end    
+    try
+       load([sdir(sessionList(iS)),'_stimulus_evoked.mat'],'fr_behavior');
+    end
+    if exist('fr_behavior','var')
+        clear fr_behavior
+        continue;
+    end    
     
-    [selec_run,pval_selec_run,selec_pupil,pval_selec_pupil,selec_pupil_norun,pval_selec_pupil_norun,...
-        r_corr_run,pval_corr_run,r_corr_pupil,pval_corr_pupil,r_corr_pupil_norun,pval_corr_pupil_norun] = beh_metric(sessionList(iS));
+    [selec_run,pval_selec_run,selec_pupil,pval_selec_pupil,...
+        r_corr_run,pval_corr_run,r_corr_pupil,pval_corr_pupil] = beh_metric(sessionList(iS));
     
     fr_behavior.run.selec.idx = selec_run;
     fr_behavior.run.selec.pval = pval_selec_run;
@@ -26,17 +28,11 @@ for iS = 1:nS
     fr_behavior.pupil.corr.r = r_corr_pupil;
     fr_behavior.pupil.corr.pval = pval_corr_pupil;
     
-    fr_behavior.pupil_norun.selec.idx = selec_pupil_norun;
-    fr_behavior.pupil_norun.selec.pval = pval_selec_pupil_norun;
-    fr_behavior.pupil_norun.corr.r = r_corr_pupil_norun;
-    fr_behavior.pupil_norun.corr.pval = pval_corr_pupil_norun;
-    
     save([sdir(sessionList(iS)),'_stimulus_evoked.mat'],'fr_behavior','-append');
 end
 
-function [selec_run,pval_selec_run,selec_pupil,pval_selec_pupil,selec_pupil_norun,pval_selec_pupil_norun,...
-    r_corr_run,pval_corr_run,r_corr_pupil,pval_corr_pupil,r_corr_pupil_norun,pval_corr_pupil_norun] =...
-    beh_metric(sessionid)
+function [selec_run,pval_selec_run,selec_pupil,pval_selec_pupil,...
+    r_corr_run,pval_corr_run,r_corr_pupil,pval_corr_pupil] = beh_metric(sessionid)
 
 load([sdir(sessionid),'_ripples.mat'],'spontaneous_win','spontaneous_anal_win');
 load([sdir(sessionid),'_Events.mat'],'running_speed','pupil_data');
@@ -46,23 +42,23 @@ load([sdir(sessionid),'_cellTable.mat'],'T');
 [spkhist,spkhist_r] = deal({});
 for iW = 1:size(spontaneous_anal_win,1)
     if diff(spontaneous_anal_win(iW,:))>1
-   spkhist(:,iW) = cellfun(@(x) histcounts(x,spontaneous_anal_win(iW,1):1:spontaneous_anal_win(iW,2)),...
-       T.spike_time,'UniformOutput',false);
+        spkhist(:,iW) = cellfun(@(x) histcounts(x,spontaneous_anal_win(iW,1):1:spontaneous_anal_win(iW,2)),...
+            T.spike_time,'UniformOutput',false);
     end
-   if iW==1
-       if spontaneous_anal_win(iW,1)>spontaneous_win(1)
-           spkhist_r = [spkhist_r,cellfun(@(x) histcounts(x,spontaneous_win(1):1:spontaneous_anal_win(iW,1)),...
-               T.spike_time,'UniformOutput',false)];
-       end
-   elseif iW==size(spontaneous_anal_win,1)
-       if spontaneous_anal_win(iW,2)<spontaneous_win(2)
-           spkhist_r = [spkhist_r,cellfun(@(x) histcounts(x,spontaneous_anal_win(iW,2):1:spontaneous_win(2)),...
-               T.spike_time,'UniformOutput',false)];
-       end
-   else
-       spkhist_r = [spkhist_r,cellfun(@(x) histcounts(x,spontaneous_anal_win(iW-1,2):1:spontaneous_anal_win(iW,1)),...
-           T.spike_time,'UniformOutput',false)];
-   end
+    if iW==1
+        if spontaneous_anal_win(iW,1)>spontaneous_win(1)
+            spkhist_r = [spkhist_r,cellfun(@(x) histcounts(x,spontaneous_win(1):1:spontaneous_anal_win(iW,1)),...
+                T.spike_time,'UniformOutput',false)];
+        end
+    elseif iW==size(spontaneous_anal_win,1)
+        if spontaneous_anal_win(iW,2)<spontaneous_win(2)
+            spkhist_r = [spkhist_r,cellfun(@(x) histcounts(x,spontaneous_anal_win(iW,2):1:spontaneous_win(2)),...
+                T.spike_time,'UniformOutput',false)];
+        end
+    else
+        spkhist_r = [spkhist_r,cellfun(@(x) histcounts(x,spontaneous_anal_win(iW-1,2):1:spontaneous_anal_win(iW,1)),...
+            T.spike_time,'UniformOutput',false)];
+    end
 end
 spkhist = mat2cell(cell2mat(spkhist),ones(size(spkhist,1),1),sum(cellfun(@length,spkhist(1,:))),1);
 spkhist_r = mat2cell(cell2mat(spkhist_r),ones(size(spkhist_r,1),1),sum(cellfun(@length,spkhist_r(1,:))),1);
@@ -104,25 +100,5 @@ selec_pupil = [cellfun(@mean,spkhigh)-cellfun(@mean,spklow)]./sqrt(cellfun(@std,
 r_corr_pupil = cellfun(@(x) x(1,2),rtmp);
 pval_corr_pupil = cellfun(@(x) x(1,2),ptmp);
 
-%% pupil - no run
-innorun = false(length(pupil_time),1);
-for iw = 1:size(spontaneous_anal_win,1)
-   innorun = innorun | (pupil_time>=spontaneous_anal_win(iw,1) & pupil_time<=spontaneous_anal_win(iw,2));
-end
-pupil_size_norun = pupil_size(innorun);
-
-[~,sortIdx] = sort(pupil_size_norun);
-low25 = sortIdx(1:round(0.25*length(sortIdx)));
-high25 = sortIdx(length(sortIdx)-round(0.25*length(sortIdx)):end);
-
-spkhist_pupil_norun = cellfun(@(x) x(innorun),spkhist_pupil,'UniformOutput',false);
-spkhigh = cellfun(@(x) x(high25),spkhist_pupil_norun,'UniformOutput',false);
-spklow = cellfun(@(x) x(low25),spkhist_pupil_norun,'UniformOutput',false);
-selec_pupil_norun = [cellfun(@mean,spkhigh)-cellfun(@mean,spklow)]./sqrt(cellfun(@std,spkhigh).^2+cellfun(@std,spklow).^2);
-[~,pval_selec_pupil_norun] = cellfun(@(x,y) ttest2(x,y),spkhigh,spklow);
-
-[rtmp,ptmp] = cellfun(@(x) corrcoef(pupil_size_norun,x,'Rows','complete'),spkhist_pupil_norun,'UniformOutput',false);
-r_corr_pupil_norun = cellfun(@(x) x(1,2),rtmp);
-pval_corr_pupil_norun = cellfun(@(x) x(1,2),ptmp);
 end
 
