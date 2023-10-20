@@ -103,7 +103,7 @@ set(h(2),'YTickLabel',[],'Fontsize',7,'Box','off','TickDir','out','XTick',[]);
 axis xy
 
 cd('D:\OneDrive - University of California, San Francisco\figures\allen\fig1')
-print(fHandle,'-depsc','-painters','psth_vis.ai');
+% print(fHandle,'-depsc','-painters','psth_vis.ai');
 %%
 dataplotz_gtotal = (cell2mat(data(:,3))-repmat(m,1,length(time)))./repmat(s,1,length(time));
 d_gtotal = dataplotz_gtotal(celltype(:,1),:);
